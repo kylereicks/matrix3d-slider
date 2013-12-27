@@ -215,11 +215,6 @@
   },
   init = function(){
     this.run = true;
-    var style = document.createElement('style'),
-    css = '';
-    css += '.slide{position:absolute;-webkit-transform-style:preserve-3d;-moz-transform-style:preserve-3d;-o-transform-style:preserve-3d;-ms-transform-style:preserve-3d;transform-style:preserve-3d;-webkit-transform:matrix3d(1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,-1);}';
-    style.insertBefore(document.createTextNode(css), null);
-    document.head.insertBefore(style, null);
     matrixSlider(document.getElementById('slider'));
   };
   if(window.addEventListener){
