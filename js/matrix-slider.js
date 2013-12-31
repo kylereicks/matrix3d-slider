@@ -11,14 +11,15 @@
       animate.stop().flip(this);
     },
     dropHandler = function(e){
-      animate.stop().reset(this).drop(childElements[childElements.indexOf(this) + 1 === el ? 0 : childElements.indexOf(this) + 1]);
+      var nextElement = childElements[childElements.indexOf(this) + 1 === el ? 0 : childElements.indexOf(this) + 1];
+      animate.stop().zIndex(nextElement, 1).drop(nextElement).reset(this, 100);
     };
     for(var i = 0, nl = childNodes.length; i < nl; i++){
       if('#text' !== childNodes[i].nodeName){
         childElements.push(childNodes[i]);
       }
     }
-    animate.drop(childElements[0]);
+    animate.zIndex(childElements[0], 1).drop(childElements[0]);
     for(var j = 0, el = childElements.length; j < el; j++){
       childElements[j].addEventListener('mousedown', tiltHandler, false);
       childElements[j].addEventListener('tiltComplete', flipHandler, false);
@@ -33,8 +34,12 @@
       }
       return this;
     },
-    reset: function(element){
-      matrix3d.reset(element);
+    reset: function(element, delay){
+      setTimeout(function(){matrix3d.reset(element);}, delay);
+      return this;
+    },
+    zIndex: function(element, n){
+      matrix3d.zIndex(element, n);
       return this;
     },
     tilt: function(element, existingFrame, existingMatrices){
@@ -143,6 +148,10 @@
       element.style['-o-transform'] = null;
       element.style['-ms-transform'] = null;
       element.style.transform = null;
+      element.style.zIndex = null;
+    },
+    zIndex: function(element, n){
+      element.style.zIndex = n;
     },
     getComputedMatrix: function(element){
       var computedStyle = window.getComputedStyle(element),
