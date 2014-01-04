@@ -2,28 +2,40 @@
   'use strict';
   var matrixSlider = function(element){
     var childNodes = element.childNodes,
-    childElements = [],
-    tiltHandler = function(e){
+    childElements = [];
+    for(var i = 0, nl = childNodes.length; i < nl; i++){
+      if('#text' !== childNodes[i].nodeName){
+        vars.elementsArray.push(childNodes[i]);
+      }
+    }
+    vars.currentElement = vars.elementsArray[0];
+    animate.zIndex(vars.currentElement, 1).drop(vars.currentElement);
+    for(var j = 0, el = vars.elementsArray.length; j < el; j++){
+      vars.elementsArray[j].addEventListener('mousedown', events.tiltHandler, false);
+      vars.elementsArray[j].addEventListener('flipComplete', events.dropHandler, false);
+    }
+  },
+  vars = {
+    currentElement: null,
+    nextElement: null,
+    elementsArray: [],
+    tiltStart: 0,
+    tiltStop: 0,
+    tiltProgress: 0
+  },
+  events = {
+    tiltHandler: function(e){
       e.preventDefault();
       animate.stop().tilt(this);
     },
-    flipHandler = function(e){
-      animate.stop().flip(this);
+    flipHandler: function(){
+      document.removeEventListener('mouseup', events.flipHandler);
+      animate.stop().flip(vars.currentElement, animate._flipEnergy());
     },
-    dropHandler = function(e){
-      var nextElement = childElements[childElements.indexOf(this) + 1 === el ? 0 : childElements.indexOf(this) + 1];
-      animate.stop().zIndex(nextElement, 1).drop(nextElement).reset(this, 100);
-    };
-    for(var i = 0, nl = childNodes.length; i < nl; i++){
-      if('#text' !== childNodes[i].nodeName){
-        childElements.push(childNodes[i]);
-      }
-    }
-    animate.zIndex(childElements[0], 1).drop(childElements[0]);
-    for(var j = 0, el = childElements.length; j < el; j++){
-      childElements[j].addEventListener('mousedown', tiltHandler, false);
-      childElements[j].addEventListener('tiltComplete', flipHandler, false);
-      childElements[j].addEventListener('flipComplete', dropHandler, false);
+    dropHandler: function(e){
+      vars.nextElement = vars.elementsArray[vars.elementsArray.indexOf(vars.currentElement) + 1 === vars.elementsArray.length ? 0 : vars.elementsArray.indexOf(vars.currentElement) + 1];
+      animate.stop().zIndex(vars.currentElement, 1).zIndex(vars.nextElement, 2).drop(vars.nextElement).reset(vars.currentElement, 100);
+      vars.currentElement = vars.nextElement;
     }
   },
   animate = {
@@ -45,20 +57,24 @@
     tilt: function(element, existingFrame, existingMatrices){
       var el = element,
       frame = existingFrame || 0,
-      duration = 35,
+      duration = 600,
+      rotation = 0.25,
       matrices = existingMatrices || {},
       frameMatrixArray = [],
       initialMatrix = matrices.initialMatrix || matrix3d.getComputedMatrix(el),
       rY = matrices.rY || matrix3d.baseMatrix.slice(0),
-      rYfreq = Math.pow(frame / duration, 0.48),
+      rYfreq = animate._easeOut(frame / duration) * (Math.PI * rotation),
       tiltComplete = new CustomEvent('tiltComplete');
-      rY[0] = Math.cos(frame * ((Math.PI / 180) / rYfreq));
-      rY[2] = -Math.sin(frame * ((Math.PI / 180) / rYfreq));
-      rY[8] = Math.sin(frame * ((Math.PI / 180) / rYfreq));
-      rY[10] = Math.cos(frame * ((Math.PI / 180) / rYfreq));
+      vars.tiltStart = frame === 0 ? new Date().getTime() : vars.tiltStart;
+      document.addEventListener('mouseup', events.flipHandler, false);
+      rY[0] = Math.cos(rYfreq);
+      rY[2] = -Math.sin(rYfreq);
+      rY[8] = Math.sin(rYfreq);
+      rY[10] = Math.cos(rYfreq);
       frameMatrixArray = matrix3d.x(initialMatrix, rY);
       if(duration >= frame){
         animate._setFrame(el, frameMatrixArray);
+        vars.tiltProgress = animate._easeOut(frame/ duration) * rotation;
         frame = frame + 1;
         animate.id = window.requestAnimationFrame(function(){animate.tilt(el, frame, {initialMatrix: initialMatrix, rY: rY});});
       }else{
@@ -67,25 +83,24 @@
       }
       return this;
     },
-    flip: function(element, existingFrame, existingMatrices){
+    flip: function(element, energy, existingFrame, existingMatrices){
       var el = element,
       frame = existingFrame || 0,
-      duration = 210,
       matrices = existingMatrices || {},
       frameMatrixArray = [],
       initialMatrix = matrices.initialMatrix || matrix3d.getComputedMatrix(el),
       rY = matrices.rY || matrix3d.baseMatrix.slice(0),
-      rYfreq = animate._easeInOut(frame/duration),
+      rYfreq = energy.ease(frame / energy.duration) * (Math.PI * (energy.rotation + vars.tiltProgress)),
       flipComplete = new CustomEvent('flipComplete');
-      rY[0] = Math.cos(frame * ((Math.PI / 180) / rYfreq));
-      rY[2] = Math.sin(frame * ((Math.PI / 180) / rYfreq));
-      rY[8] = -Math.sin(frame * ((Math.PI / 180) / rYfreq));
-      rY[10] = Math.cos(frame * ((Math.PI / 180) / rYfreq));
+      rY[0] = Math.cos(rYfreq);
+      rY[2] = Math.sin(rYfreq);
+      rY[8] = -Math.sin(rYfreq);
+      rY[10] = Math.cos(rYfreq);
       frameMatrixArray = matrix3d.x(initialMatrix, rY);
-      if(duration >= frame){
+      if(energy.duration >= frame){
         animate._setFrame(el, frameMatrixArray);
         frame = frame + 1;
-        animate.id = window.requestAnimationFrame(function(){animate.flip(el, frame, {initialMatrix: initialMatrix, rY: rY});});
+        animate.id = window.requestAnimationFrame(function(){animate.flip(el, energy, frame, {initialMatrix: initialMatrix, rY: rY});});
       }else{
         window.cancelAnimationFrame(animate.id);
         el.dispatchEvent(flipComplete);
@@ -112,6 +127,25 @@
         window.cancelAnimationFrame(animate.id);
       }
       return this;
+    },
+    _flipEnergy: function(){
+      var time = 0,
+      progress = 0,
+      energy = {};
+      vars.tiltStop = new Date().getTime();
+      time = vars.tiltStop - vars.tiltStart;
+      progress = time / 10000;
+      energy.duration = Math.floor(progress * 180 + 60);
+      energy.rotation = Math.floor(progress * 31) % 2 === 1 ? Math.floor(progress * 31) : Math.floor(progress * 31) + 1;
+      if(1 === energy.rotation){
+        energy.ease = animate._easeInOut;
+      }else{
+        energy.ease = animate._easeOut;
+      }
+      return energy;
+    },
+    _easeOut: function(n){
+      return Math.pow(n, (1 / 6));
     },
     _easeInOut: function(n){
       var q = 0.48 - n / 1.04,
