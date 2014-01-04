@@ -14,12 +14,12 @@ article,aside,details,figcaption,figure,footer,header,hgroup,main,nav,section,su
 .slide{
   position: absolute;
   width: 380px;
-  height: 230px;
+  height: 229px;
   background: #ddd;
   list-style: none;
   border: 1px solid #333;
   padding: 10px;
-  margin-top: -62.5px;
+  margin-top: -62px;
   margin-left: -100px;
   -webkit-transform-style: preserve-3d;
   -moz-transform-style: preserve-3d;
