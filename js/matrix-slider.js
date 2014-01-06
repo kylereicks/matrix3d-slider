@@ -6,11 +6,12 @@
     currentElement = null,
     nextElement = null,
     elementsArray = [],
+    currentAnimation = '',
     tiltStart = 0,
     tiltStop = 0,
     tiltProgress = 0,
     i = 0,
-    max = 0;
+    imax = 0;
 
     root.events = {
       tiltHandler: function(e){
@@ -55,6 +56,7 @@
         rY = matrices.rY || MatrixSlider.matrix3d.baseMatrix.slice(0),
         rYfreq = root.animate._easeOut(frame / duration, 6) * (Math.PI * rotation),
         tiltComplete = new CustomEvent('tiltComplete');
+        currentAnimation = 'tilt';
         tiltStart = frame === 0 ? new Date().getTime() : tiltStart;
         document.addEventListener('mouseup', root.events.flipHandler, false);
         rY[0] = Math.cos(rYfreq);
@@ -63,8 +65,8 @@
         rY[10] = Math.cos(rYfreq);
         frameMatrixArray = MatrixSlider.matrix3d.x(initialMatrix, rY);
         if(duration >= frame){
-          root.animate._setFrame(el, frameMatrixArray);
           tiltProgress = root.animate._easeOut(frame/ duration) * rotation;
+          root.animate._setFrame(el, frameMatrixArray, tiltProgress);
           frame = frame + 1;
           root.animate.id = window.requestAnimationFrame(function(){root.animate.tilt(el, frame, {initialMatrix: initialMatrix, rY: rY});});
         }else{
@@ -82,13 +84,14 @@
         rY = matrices.rY || MatrixSlider.matrix3d.baseMatrix.slice(0),
         rYfreq = root.animate._easeOut(frame / energy.duration, 3) * (Math.PI * (energy.rotation + tiltProgress)),
         flipComplete = new CustomEvent('flipComplete');
+        currentAnimation = 'flip';
         rY[0] = Math.cos(rYfreq);
         rY[2] = Math.sin(rYfreq);
         rY[8] = -Math.sin(rYfreq);
         rY[10] = Math.cos(rYfreq);
         frameMatrixArray = MatrixSlider.matrix3d.x(initialMatrix, rY);
         if(energy.duration >= frame){
-          root.animate._setFrame(el, frameMatrixArray);
+          root.animate._setFrame(el, frameMatrixArray, root.animate._easeOut(frame/ energy.duration) * energy.rotation);
           frame = frame + 1;
           root.animate.id = window.requestAnimationFrame(function(){root.animate.flip(el, energy, frame, {initialMatrix: initialMatrix, rY: rY});});
         }else{
@@ -107,6 +110,7 @@
         tZ = matrices.tZ || MatrixSlider.matrix3d.baseMatrix.slice(0);
         tZ[15] = -root.animate._easeOutElastic(frame/duration);
         frameMatrixArray = MatrixSlider.matrix3d.x(initialMatrix, tZ);
+        currentAnimation = 'drop';
         if(1 >= frame/duration){
           root.animate._setFrame(el, frameMatrixArray);
           frame = frame + 1;
@@ -124,9 +128,9 @@
         energy = {};
         tiltStop = new Date().getTime();
         time = tiltStop - tiltStart;
-        progress = time / 10000;
-        energy.duration = Math.floor(progress * 180 + 60);
-        energy.rotation = Math.floor(progress * 31) % 2 === 1 ? Math.floor(progress * 31) : Math.floor(progress * 31) + 1;
+        progress = Math.pow((tiltProgress / 0.15), 2) * 21;
+        energy.duration = 1000 > time ? 60 : Math.floor(time * (60 / 1000));
+        energy.rotation = Math.floor(progress) % 2 === 1 ? Math.floor(progress) : Math.floor(progress) + 1;
         return energy;
       },
       _easeOut: function(n, strength){
@@ -136,17 +140,55 @@
       _easeOutElastic: function(n){
         return Math.pow(2, -10 * n) * Math.sin((n - 0.075) * (2 * Math.PI) / 0.3) + 1;
       },
-      _setFrame: function(element, frameMatrixArray){
+      _setShadow: function(element, rotation){
+        var gradientDirection = '',
+        turns = 0,
+        progress = 0,
+        shadowLevel = 0;
+
+        turns = Math.floor(rotation);
+        gradientDirection = turns % 2 === 0 && 'flip' === currentAnimation ? 'right' : 'left';
+        progress = rotation - turns;
+        shadowLevel = 0.5 > progress ? progress : 1 - progress;
+
+        element.setAttribute('data-shadow', gradientDirection + '-' + Math.round(shadowLevel * 100));
+      },
+      _setFrame: function(element, frameMatrixArray, rotation){
         var frameMatrix = 'matrix3d(' + frameMatrixArray + ')';
+
         element.style['-webkit-transform'] = frameMatrix;
         element.style['-moz-transform'] = frameMatrix;
         element.style['-o-transform'] = frameMatrix;
         element.style['-ms-transform'] = frameMatrix;
         element.style.transform = frameMatrix;
+
+        if(rotation){
+          root.animate._setShadow(element, rotation);
+        }
       }
     };
 
-    for(i = 0, max = childNodes.length; i < max; i++){
+    root.shadowCSS = function(){
+      var style = document.createElement('style'),
+      css = '',
+      directions = ['left', 'right'],
+      j = 0,
+      jmax = 0;
+
+      for(i = 0, imax = directions.length; i < imax; i++){
+        for(j = 0, jmax = 50; j < jmax; j++){
+          css += '.slide[data-shadow="' + directions[i] + '-' + j + '"]:before{';
+          css += 'background: -webkit-linear-gradient(' + directions[i] + ', rgba(255,255,255,0) ' + (100 - (j * 1.5)) + '%, rgba(0,0,0,0.3) ' + (120 - (j * 1.5)) + '%);';
+          css += '}';
+        }
+      }
+      style.insertBefore(document.createTextNode(css), null);
+      document.head.insertBefore(style, null);
+    };
+
+    root.shadowCSS();
+
+    for(i = 0, imax = childNodes.length; i < imax; i++){
       if('#text' !== childNodes[i].nodeName){
         elementsArray.push(childNodes[i]);
       }
@@ -156,7 +198,7 @@
 
     root.animate.zIndex(currentElement, 1).drop(currentElement);
 
-    for(i = 0, max = elementsArray.length; i < max; i++){
+    for(i = 0, imax = elementsArray.length; i < imax; i++){
       elementsArray[i].addEventListener('mousedown', root.events.tiltHandler, false);
       elementsArray[i].addEventListener('flipComplete', root.events.dropHandler, false);
     }
