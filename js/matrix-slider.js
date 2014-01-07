@@ -38,7 +38,10 @@
         return this;
       },
       reset: function(element, delay){
-        setTimeout(function(){MatrixSlider.matrix3d.reset(element);}, delay);
+        setTimeout(function(){
+          MatrixSlider.matrix3d.reset(element);
+          root.animate._removeShadow(element);
+        }, delay);
         return this;
       },
       zIndex: function(element, n){
@@ -153,6 +156,9 @@
 
         element.setAttribute('data-shadow', gradientDirection + '-' + Math.round(shadowLevel * 100));
       },
+      _removeShadow: function(element){
+        element.removeAttribute('data-shadow');
+      },
       _setFrame: function(element, frameMatrixArray, rotation){
         var frameMatrix = 'matrix3d(' + frameMatrixArray + ')';
 
@@ -179,6 +185,10 @@
         for(j = 0, jmax = 50; j < jmax; j++){
           css += '.slide[data-shadow="' + directions[i] + '-' + j + '"]:before{';
           css += 'background: -webkit-linear-gradient(' + directions[i] + ', rgba(255,255,255,0) ' + (100 - (j * 1.5)) + '%, rgba(0,0,0,0.3) ' + (120 - (j * 1.5)) + '%);';
+          css += 'background: -moz-linear-gradient(' + directions[i] + ', rgba(255,255,255,0) ' + (100 - (j * 1.5)) + '%, rgba(0,0,0,0.3) ' + (120 - (j * 1.5)) + '%);';
+          css += 'background: -o-linear-gradient(' + directions[i] + ', rgba(255,255,255,0) ' + (100 - (j * 1.5)) + '%, rgba(0,0,0,0.3) ' + (120 - (j * 1.5)) + '%);';
+          css += 'background: -ms-linear-gradient(' + directions[i] + ', rgba(255,255,255,0) ' + (100 - (j * 1.5)) + '%, rgba(0,0,0,0.3) ' + (120 - (j * 1.5)) + '%);';
+          css += 'background: linear-gradient(to ' + directions[+!i] + ', rgba(255,255,255,0) ' + (100 - (j * 1.5)) + '%, rgba(0,0,0,0.3) ' + (120 - (j * 1.5)) + '%);';
           css += '}';
         }
       }
@@ -219,6 +229,9 @@
       element.style['-ms-transform'] = null;
       element.style.transform = null;
       element.style.zIndex = null;
+      if(!element.style.cssText){
+        element.removeAttribute('style');
+      }
     },
     zIndex: function(element, n){
       element.style.zIndex = n;
