@@ -9,6 +9,11 @@ article,aside,details,figcaption,figure,footer,header,hgroup,main,nav,section,su
   border-right: 100px solid #444;
   border-bottom: 62.5px solid #666;
   border-left: 100px solid #888;
+//  -webkit-perspective: 2000px;
+  -moz-perspective: 2000px;
+  -o-perspective: 2000px;
+  -ms-perspective: 2000px;
+  perspective: 2000px;
 }
 
 .slide{
@@ -37,10 +42,6 @@ article,aside,details,figcaption,figure,footer,header,hgroup,main,nav,section,su
   -ms-transform: matrix3d(1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,-1);
   transform: matrix3d(1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,-1);
   z-index: -1;
-}
-
-.slide.active{
-  z-index; 1;
 }
 
 .slide:after{
