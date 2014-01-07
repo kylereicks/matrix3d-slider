@@ -2,7 +2,8 @@
   'use strict';
   var MatrixSlider = function(element){
     var root = this,
-    childNodes = element.childNodes,
+    slider = element,
+    childNodes = slider.childNodes,
     currentElement = null,
     nextElement = null,
     elementsArray = [],
@@ -18,7 +19,7 @@
         e.preventDefault();
         root.animate.stop().tilt(this);
       },
-      flipHandler: function(){
+      flipHandler: function(e){
         document.removeEventListener('mouseup', root.events.flipHandler);
         root.animate.stop().flip(currentElement, root.animate._flipEnergy());
       },
@@ -26,6 +27,9 @@
         nextElement = elementsArray[elementsArray.indexOf(currentElement) + 1 === elementsArray.length ? 0 : elementsArray.indexOf(currentElement) + 1];
         root.animate.stop().zIndex(currentElement, 1).zIndex(nextElement, 2).drop(nextElement).reset(currentElement, 100);
         currentElement = nextElement;
+      },
+      perspectiveHandler: function(e){
+        root.animate._addPerspective();
       }
     };
 
@@ -94,6 +98,9 @@
         rY[10] = Math.cos(rYfreq);
         frameMatrixArray = MatrixSlider.matrix3d.x(initialMatrix, rY);
         if(energy.duration >= frame){
+          if(frame + 1 > energy.duration){
+            root.animate._losePerspective();
+          }
           root.animate._setFrame(el, frameMatrixArray, root.animate._easeOut(frame/ energy.duration) * energy.rotation);
           frame = frame + 1;
           root.animate.id = window.requestAnimationFrame(function(){root.animate.flip(el, energy, frame, {initialMatrix: initialMatrix, rY: rY});});
@@ -110,7 +117,8 @@
         matrices = existingMatrices || {},
         frameMatrixArray = [],
         initialMatrix = matrices.initialMatrix || MatrixSlider.matrix3d.getComputedMatrix(el),
-        tZ = matrices.tZ || MatrixSlider.matrix3d.baseMatrix.slice(0);
+        tZ = matrices.tZ || MatrixSlider.matrix3d.baseMatrix.slice(0),
+        dropComplete = new CustomEvent('dropComplete');
         tZ[15] = -root.animate._easeOutElastic(frame/duration);
         frameMatrixArray = MatrixSlider.matrix3d.x(initialMatrix, tZ);
         currentAnimation = 'drop';
@@ -122,6 +130,7 @@
           frameMatrixArray[15] = 1;
           root.animate._setFrame(el, frameMatrixArray);
           window.cancelAnimationFrame(root.animate.id);
+          el.dispatchEvent(dropComplete);
         }
         return this;
       },
@@ -158,6 +167,23 @@
       },
       _removeShadow: function(element){
         element.removeAttribute('data-shadow');
+      },
+      _addPerspective: function(){
+        slider.style['-webkit-perspective'] = '2000px';
+        slider.style['-moz-perspective'] = '2000px';
+        slider.style['-o-perspective'] = '2000px';
+        slider.style['-ms-perspective'] = '2000px';
+        slider.style.perspective = '2000px';
+      },
+      _losePerspective: function(){
+        slider.style['-webkit-perspective'] = null;
+        slider.style['-moz-perspective'] = null;
+        slider.style['-o-perspective'] = null;
+        slider.style['-ms-perspective'] = null;
+        slider.style.perspective = null;
+        if(!slider.style.cssText){
+          slider.removeAttribute('style');
+        }
       },
       _setFrame: function(element, frameMatrixArray, rotation){
         var frameMatrix = 'matrix3d(' + frameMatrixArray + ')';
@@ -211,6 +237,7 @@
     for(i = 0, imax = elementsArray.length; i < imax; i++){
       elementsArray[i].addEventListener('mousedown', root.events.tiltHandler, false);
       elementsArray[i].addEventListener('flipComplete', root.events.dropHandler, false);
+      elementsArray[i].addEventListener('dropComplete', root.events.perspectiveHandler, false);
     }
 
   };
