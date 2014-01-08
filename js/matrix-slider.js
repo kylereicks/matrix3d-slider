@@ -25,7 +25,7 @@
       },
       dropHandler: function(e){
         nextElement = elementsArray[elementsArray.indexOf(currentElement) + 1 === elementsArray.length ? 0 : elementsArray.indexOf(currentElement) + 1];
-        root.animate.stop().zIndex(currentElement, 1).zIndex(nextElement, 2).drop(nextElement).reset(currentElement, 100);
+        root.animate.stop().zIndex(currentElement, 1).zIndex(nextElement, 2).drop(nextElement).reset(currentElement, 10);
         currentElement = nextElement;
       },
       perspectiveHandler: function(e){
